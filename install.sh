@@ -189,7 +189,7 @@ install_snapshots() {
     echo "Installation complete. Running update-systemd-boot-snapshots..."
     update-systemd-boot-snapshots
 
-    echo "systemd-boot-snapshots v0.2.2 has been successfully installed and configured."
+    echo "systemd-boot-snapshots v0.2.3 has been successfully installed and configured."
     echo "You can now boot into snapshots from the systemd-boot menu (press space at boot)."
 }
 

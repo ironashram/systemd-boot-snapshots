@@ -5,7 +5,7 @@
 #
 # Main script for systemd-boot-snapshots for Arch Linux
 # Monitors and adds BTRFS snapshots to the systemd-boot menu
-# Version 0.2.2
+# Version 0.2.3
 
 # Load configuration
 if [ -f /etc/systemd-boot-snapshots.conf ]; then
@@ -31,6 +31,16 @@ NL='
 '       # Newline for processing
 date_format="+%b %d %Y %H:%M"  # Date format for snapshot display
 sep=";"  # Separator for data processing
+
+# Helper function to trim whitespace (Added as dependency for get_snapshot_info)
+trim() {
+    local var="$*"
+    # remove leading whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"
+    echo -n "$var"
+}
 
 # Format entry title according to configured format
 # Parameters:
@@ -604,6 +614,21 @@ for pair in $btrfs_snapshots; do
       snap_type="$(trim "$type")"
       snap_description="$(trim "$description")"
     fi
+  fi
+
+  # If date is still Unknown after checking timeshift/snapper, try to parse file name
+  # Looks for pattern .DD-MM-YYYY (e.g. root-snapshot.13-11-2025)
+  if [ "$snapshot_date_trim" = "Unknown" ] || [ -z "$snapshot_date_trim" ]; then
+      if [[ "$btrfs_snapshot" =~ \.([0-9]{2})-([0-9]{2})-([0-9]{4}) ]]; then
+          # Regex groups: 1=Day, 2=Month, 3=Year
+          local _parsed_date="${BASH_REMATCH[3]}-${BASH_REMATCH[2]}-${BASH_REMATCH[1]}"
+          # Try to format using the date command
+          snapshot_date_trim=$(date -d "$_parsed_date" "$date_format" 2>/dev/null)
+          # If date command fails, just use the raw detected date
+          if [ -z "$snapshot_date_trim" ]; then
+             snapshot_date_trim="$_parsed_date"
+          fi
+      fi
   fi
 
   # Create snapshot folder for this snapshot
