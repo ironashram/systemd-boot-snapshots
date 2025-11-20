@@ -5,7 +5,7 @@
 #
 # Main script for systemd-boot-snapshots for Arch Linux
 # Monitors and adds BTRFS snapshots to the systemd-boot menu
-# Version 0.2.7 (Final Fix: Syntax & Logic)
+# Version 0.2.7
 
 # Load configuration
 if [ -f /etc/systemd-boot-snapshots.conf ]; then
