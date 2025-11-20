@@ -35,24 +35,24 @@ detect_efi_mount() {
             return 0
         fi
     done
-    
+
     # If no standard location is found, try to find it from fstab or mounted partitions
     local efi_mount
     efi_mount=$(grep -E "/boot/efi|/boot|/efi" /etc/fstab | grep -i "vfat|fat32" | awk '{print $2}' | head -n 1)
-    
+
     if [ -n "$efi_mount" ] && [ -d "$efi_mount/EFI" ]; then
         echo "$efi_mount"
         return 0
     fi
-    
+
     # Last resort, check mounted filesystems
     efi_mount=$(mount | grep "vfat" | grep -E "/boot/efi|/boot|/efi" | awk '{print $3}' | head -n 1)
-    
+
     if [ -n "$efi_mount" ] && [ -d "$efi_mount/EFI" ]; then
         echo "$efi_mount"
         return 0
     fi
-    
+
     echo ""
     return 1
 }
@@ -60,7 +60,7 @@ detect_efi_mount() {
 # Function to determine snapshot tools and paths
 detect_snapshot_tools() {
     local snapshot_tools=""
-    
+
     # Check for Timeshift
     if command -v timeshift >/dev/null 2>&1; then
         snapshot_tools="$snapshot_tools timeshift"
@@ -73,7 +73,7 @@ detect_snapshot_tools() {
             fi
         fi
     fi
-    
+
     # Check for Snapper
     if command -v snapper >/dev/null 2>&1; then
         snapshot_tools="$snapshot_tools snapper"
@@ -84,17 +84,17 @@ detect_snapshot_tools() {
             ls -1 /etc/snapper/configs
         fi
     fi
-    
+
     echo "$snapshot_tools"
 }
 
 # Function to install
 install_snapshots() {
     echo "Installing systemd-boot-snapshots..."
-    
+
     INITRAMFS_SYSTEM=$(detect_initramfs_system)
     echo "Detected initramfs system: $INITRAMFS_SYSTEM"
-    
+
     EFI_MOUNT=$(detect_efi_mount)
     if [ -z "$EFI_MOUNT" ]; then
         echo "Warning: Could not detect EFI partition mount point. Defaulting to /boot/efi"
@@ -102,38 +102,38 @@ install_snapshots() {
     else
         echo "Detected EFI partition mounted at: $EFI_MOUNT"
     fi
-    
+
     SNAPSHOT_TOOLS=$(detect_snapshot_tools)
     echo "Detected snapshot tools: $SNAPSHOT_TOOLS"
-    
+
     # Create required directories
     mkdir -p /etc/default
     mkdir -p /usr/bin
     mkdir -p /usr/lib/systemd-boot-snapshots
     mkdir -p /usr/lib/systemd/system
-    
+
     # Install configuration files
     install -Dm644 systemd-boot-snapshots.conf /etc/default/systemd-boot-snapshots.conf
-    
+
     # Copy default config to /etc/ if it doesn't exist
     if [ ! -f /etc/systemd-boot-snapshots.conf ]; then
         install -Dm644 systemd-boot-snapshots.conf /etc/systemd-boot-snapshots.conf
     fi
-    
+
     # Install main scripts
     install -Dm755 update-systemd-boot-snapshots /usr/bin/update-systemd-boot-snapshots
     install -Dm755 systemd-boot-mount-snapshot-modules /usr/lib/systemd-boot-snapshots/systemd-boot-mount-snapshot-modules
     install -Dm755 systemd-boot-snapshots-notify /usr/lib/systemd-boot-snapshots/systemd-boot-snapshots-notify
-    
+
     # Update EFI path in systemd-boot-entries.path
     sed -i "s|PathModified=/boot/efi/loader/entries|PathModified=$EFI_MOUNT/loader/entries|g" systemd-boot-entries.path
-    
+
     # Install systemd files
     install -Dm644 update-systemd-boot-snapshots.service /usr/lib/systemd/system/update-systemd-boot-snapshots.service
     install -Dm644 systemd-boot-entries.path /usr/lib/systemd/system/systemd-boot-entries.path
     install -Dm644 snapper-snapshots.path /usr/lib/systemd/system/snapper-snapshots.path
     install -Dm644 timeshift-snapshots.path /usr/lib/systemd/system/timeshift-snapshots.path
-    
+
     # Installation specific to initramfs system
     if [ "$INITRAMFS_SYSTEM" = "dracut" ]; then
         # Installation for dracut
@@ -149,7 +149,7 @@ install_snapshots() {
         mkdir -p /usr/lib/initcpio/install
         install -Dm644 mkinitcpio/hooks/systemd-boot-snapshots /usr/lib/initcpio/hooks/systemd-boot-snapshots
         install -Dm644 mkinitcpio/install/systemd-boot-snapshots /usr/lib/initcpio/install/systemd-boot-snapshots
-        
+
         # Add systemd-boot-snapshots module to mkinitcpio.conf if not already present
         if ! grep -q "systemd-boot-snapshots" /etc/mkinitcpio.conf; then
             if grep -q "HOOKS=.*block" /etc/mkinitcpio.conf; then
@@ -160,22 +160,22 @@ install_snapshots() {
         fi
         echo "Mkinitcpio configuration installed."
     fi
-    
+
     # Enable systemd services based on detected tools
     systemctl daemon-reload
     systemctl enable systemd-boot-entries.path
-    
+
     # Enable snapshot monitoring based on detected tools
     if echo "$SNAPSHOT_TOOLS" | grep -q "snapper"; then
         systemctl enable snapper-snapshots.path
         echo "Snapper snapshot monitoring enabled."
     fi
-    
+
     if echo "$SNAPSHOT_TOOLS" | grep -q "timeshift"; then
         systemctl enable timeshift-snapshots.path
         echo "Timeshift snapshot monitoring enabled."
     fi
-    
+
     # Update initramfs
     echo "Updating initramfs..."
     if [ "$INITRAMFS_SYSTEM" = "dracut" ]; then
@@ -185,24 +185,24 @@ install_snapshots() {
         # Update initramfs with mkinitcpio
         mkinitcpio -P
     fi
-    
+
     echo "Installation complete. Running update-systemd-boot-snapshots..."
     update-systemd-boot-snapshots
-    
-    echo "systemd-boot-snapshots v0.1.1 has been successfully installed and configured."
+
+    echo "systemd-boot-snapshots v0.2.1 has been successfully installed and configured."
     echo "You can now boot into snapshots from the systemd-boot menu (press space at boot)."
 }
 
 # Function to uninstall
 uninstall_snapshots() {
     echo "Uninstalling systemd-boot-snapshots..."
-    
+
     INITRAMFS_SYSTEM=$(detect_initramfs_system)
-    
+
     # Disable systemd services
     systemctl disable --now timeshift-snapshots.path snapper-snapshots.path systemd-boot-entries.path update-systemd-boot-snapshots.service
     systemctl daemon-reload
-    
+
     # Remove common files
     rm -f /etc/default/systemd-boot-snapshots.conf
     rm -f /etc/systemd-boot-snapshots.conf
@@ -213,7 +213,7 @@ uninstall_snapshots() {
     rm -f /usr/lib/systemd/system/systemd-boot-entries.path
     rm -f /usr/lib/systemd/system/snapper-snapshots.path
     rm -f /usr/lib/systemd/system/timeshift-snapshots.path
-    
+
     # Removal specific to initramfs system
     if [ "$INITRAMFS_SYSTEM" = "dracut" ]; then
         # Removal for dracut
@@ -222,14 +222,14 @@ uninstall_snapshots() {
         # Removal for mkinitcpio
         rm -f /usr/lib/initcpio/hooks/systemd-boot-snapshots
         rm -f /usr/lib/initcpio/install/systemd-boot-snapshots
-        
+
         # Remove module from mkinitcpio.conf
         sed -i 's/ systemd-boot-snapshots//' /etc/mkinitcpio.conf
     fi
-    
+
     # Remove directory
     rmdir --ignore-fail-on-non-empty /usr/lib/systemd-boot-snapshots/
-    
+
     # Update initramfs
     echo "Updating initramfs..."
     if [ "$INITRAMFS_SYSTEM" = "dracut" ]; then
@@ -237,7 +237,7 @@ uninstall_snapshots() {
     else
         mkinitcpio -P
     fi
-    
+
     echo "systemd-boot-snapshots has been successfully uninstalled."
 }
 

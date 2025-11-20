@@ -21,7 +21,7 @@ optdepends=('timeshift: support for Timeshift snapshots'
 backup=('etc/systemd-boot-snapshots.conf')
 install=${pkgname}.install
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
-sha256sums=('27579e2dc12f57f76055ffc1dc14bd1fa56af6e3582a42391233372703bcfccb')
+sha256sums=('ad88344b4c6db8bcc6026079664b96716f685d1941b397f5f2b2e78efbcd33dd')
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"

@@ -8,6 +8,10 @@
 
 All notable changes to the systemd-boot-snapshots project will be documented in this file.
 
+## [0.2.1] - 2025-11-20
+### Fixed
+ - Fixed kernel detection if /boot is fat32 and not in btrfs snapshots
+
 ## [0.1.1] - 2025-04-23
 
 ### Added
