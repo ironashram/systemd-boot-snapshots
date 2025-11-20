@@ -5,7 +5,7 @@
 #
 # Main script for systemd-boot-snapshots for Arch Linux
 # Monitors and adds BTRFS snapshots to the systemd-boot menu
-# Version 0.2.3
+# Version 0.2.7 (Final Fix: Syntax & Logic)
 
 # Load configuration
 if [ -f /etc/systemd-boot-snapshots.conf ]; then
@@ -25,19 +25,17 @@ SNAPSHOTS_SUBMENU=${SNAPSHOTS_SUBMENU:-"true"}      # Use submenu for snapshots
 DEBUG_BOOT=${DEBUG_BOOT:-"false"}                   # Enable debug logging during boot
 # Default title format includes all available info with safety indicator
 SNAPSHOT_TITLE_FORMAT=${SNAPSHOT_TITLE_FORMAT:-"{kernel_version} [{safety}] - {date} {type} {description}"}
+date_format=${DATE_FORMAT:-"+%b %d %Y %H:%M"}  # Date format for snapshot display
 
 # Constants
 NL='
 '       # Newline for processing
-date_format="+%b %d %Y %H:%M"  # Date format for snapshot display
 sep=";"  # Separator for data processing
 
-# Helper function to trim whitespace (Added as dependency for get_snapshot_info)
+#  Helper function to trim whitespace (Required by get_snapshot_info)
 trim() {
     local var="$*"
-    # remove leading whitespace characters
     var="${var#"${var%%[![:space:]]*}"}"
-    # remove trailing whitespace characters
     var="${var%"${var##*[![:space:]]}"}"
     echo -n "$var"
 }
@@ -510,9 +508,16 @@ if [ -z "$loader_entry_path" ] || [ "$loader_entry_path" = "${loader_entry_path%
 fi
 
 # Create template for boot loader entries
-loader_entry_template="$(sed "s/subvol=[^ ,]*/<SUBVOL>/; \
-  s/title.*/& <TITLE_SUFFIX>/; \
-  /^options.*/ s/$/<OPTIONS>/" <"$loader_entry_path")"
+#  Check if subvol parameter exists in original file. If not, inject rootflags before options.
+if grep -q "subvol=" "$loader_entry_path"; then
+  loader_entry_template="$(sed "s/subvol=[^ ,]*/<SUBVOL>/; \
+    s/title.*/& <TITLE_SUFFIX>/; \
+    /^options.*/ s/$/<OPTIONS>/" <"$loader_entry_path")"
+else
+  # Inject rootflags=<SUBVOL> if it was missing (common in simple layouts)
+  loader_entry_template="$(sed "s/title.*/& <TITLE_SUFFIX>/; \
+    /^options.*/ s/$/ rootflags=<SUBVOL><OPTIONS>/" <"$loader_entry_path")"
+fi
 
 echo "Creating snapshots based on loader entry: $loader_entry_path"
 
@@ -564,9 +569,10 @@ snapshots=$({
 })
 
 # Get all BTRFS snapshots
+#  Uses your validated SED + PASTE command chain to generate the list
 btrfs_snapshots=$(
-  btrfs subvolume list -s --sort=-rootid / | awk '{print $14}' |
-    (btrfs subvolume list -sa --sort=-rootid / | awk '{print $14}' |
+  btrfs subvolume list -s --sort=-rootid / | sed 's/.*path //' |
+    (btrfs subvolume list -sa --sort=-rootid / | sed 's/.*path //' |
       (paste -d '' /dev/fd/3 /dev/fd/4) 4<&0) 3<&0 | tac
 )
 
@@ -616,12 +622,12 @@ for pair in $btrfs_snapshots; do
     fi
   fi
 
-  # If date is still Unknown after checking timeshift/snapper, try to parse file name
+  #  Manual date parsing fallback if date is Unknown
   # Looks for pattern .DD-MM-YYYY (e.g. root-snapshot.13-11-2025)
   if [ "$snapshot_date_trim" = "Unknown" ] || [ -z "$snapshot_date_trim" ]; then
       if [[ "$btrfs_snapshot" =~ \.([0-9]{2})-([0-9]{2})-([0-9]{4}) ]]; then
           # Regex groups: 1=Day, 2=Month, 3=Year
-          local _parsed_date="${BASH_REMATCH[3]}-${BASH_REMATCH[2]}-${BASH_REMATCH[1]}"
+          _parsed_date="${BASH_REMATCH[3]}-${BASH_REMATCH[2]}-${BASH_REMATCH[1]}"
           # Try to format using the date command
           snapshot_date_trim=$(date -d "$_parsed_date" "$date_format" 2>/dev/null)
           # If date command fails, just use the raw detected date

@@ -17,6 +17,7 @@ build/
 src/
 pkg/
 dist/
+*.tar
 *.tar.gz
 *.sha256
 
