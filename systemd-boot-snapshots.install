@@ -36,7 +36,7 @@ detect_efi_mount() {
 }
 
 post_install() {
-  echo "Installation of systemd-boot-snapshots v0.2.1 completed."
+  echo "Installation of systemd-boot-snapshots v0.2.2 completed."
 
   # Copy default config to /etc/ if it doesn't exist
   if [ ! -f /etc/systemd-boot-snapshots.conf ] && [ -f /etc/default/systemd-boot-snapshots.conf ]; then

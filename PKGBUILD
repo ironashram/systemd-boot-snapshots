@@ -6,7 +6,7 @@
 
 # Maintainer: [Anonimo] <anonimo@vivaldi.net>
 pkgname=systemd-boot-snapshots
-pkgver=0.2.1
+pkgver=0.2.2
 pkgrel=1
 pkgdesc="Enhances systemd-boot by adding BTRFS snapshots to the boot menu"
 arch=('any')
