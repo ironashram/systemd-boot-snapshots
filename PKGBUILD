@@ -6,7 +6,7 @@
 
 # Maintainer: [Anonimo] <anonimo@vivaldi.net>
 pkgname=systemd-boot-snapshots
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc="Enhances systemd-boot by adding BTRFS snapshots to the boot menu"
 arch=('any')
@@ -21,11 +21,11 @@ optdepends=('timeshift: support for Timeshift snapshots'
 backup=('etc/systemd-boot-snapshots.conf')
 install=${pkgname}.install
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
-sha256sums=('ad88344b4c6db8bcc6026079664b96716f685d1941b397f5f2b2e78efbcd33dd')
+sha256sums=('b10032331515f032536a729f4c8c860fc20e3dfa5acdfd9efed16bda8b26d17a')
 
 package() {
   cd "${srcdir}/${pkgname}-${pkgver}"
-  
+
   # Create directories
   install -dm755 "${pkgdir}/etc/default"
   install -dm755 "${pkgdir}/usr/bin"
@@ -34,31 +34,31 @@ package() {
   install -dm755 "${pkgdir}/usr/lib/initcpio/install"
   install -dm755 "${pkgdir}/usr/lib/systemd/system"
   install -dm755 "${pkgdir}/usr/lib/dracut/modules.d/90systemd-boot-snapshots"
-  
+
   # Install configuration
   install -Dm644 systemd-boot-snapshots.conf "${pkgdir}/etc/default/systemd-boot-snapshots.conf"
-  
+
   # Install main scripts
   install -Dm755 update-systemd-boot-snapshots "${pkgdir}/usr/bin/update-systemd-boot-snapshots"
   install -Dm755 systemd-boot-mount-snapshot-modules "${pkgdir}/usr/lib/systemd-boot-snapshots/systemd-boot-mount-snapshot-modules"
   install -Dm755 systemd-boot-snapshots-notify "${pkgdir}/usr/lib/systemd-boot-snapshots/systemd-boot-snapshots-notify"
-  
+
   # Install mkinitcpio hooks
   install -Dm644 mkinitcpio/hooks/systemd-boot-snapshots "${pkgdir}/usr/lib/initcpio/hooks/systemd-boot-snapshots"
   install -Dm644 mkinitcpio/install/systemd-boot-snapshots "${pkgdir}/usr/lib/initcpio/install/systemd-boot-snapshots"
-  
+
   # Install dracut module
   install -Dm755 dracut/90systemd-boot-snapshots/module-setup.sh "${pkgdir}/usr/lib/dracut/modules.d/90systemd-boot-snapshots/module-setup.sh"
   install -Dm755 dracut/90systemd-boot-snapshots/systemd-boot-snapshots.sh "${pkgdir}/usr/lib/dracut/modules.d/90systemd-boot-snapshots/systemd-boot-snapshots.sh"
   ln -sf /usr/lib/systemd-boot-snapshots/systemd-boot-mount-snapshot-modules "${pkgdir}/usr/lib/dracut/modules.d/90systemd-boot-snapshots/systemd-boot-mount-snapshot-modules.sh"
   ln -sf /usr/lib/systemd-boot-snapshots/systemd-boot-snapshots-notify "${pkgdir}/usr/lib/dracut/modules.d/90systemd-boot-snapshots/systemd-boot-snapshots-notify"
-  
+
   # Install systemd units
   install -Dm644 update-systemd-boot-snapshots.service "${pkgdir}/usr/lib/systemd/system/update-systemd-boot-snapshots.service"
   install -Dm644 systemd-boot-entries.path "${pkgdir}/usr/lib/systemd/system/systemd-boot-entries.path"
   install -Dm644 snapper-snapshots.path "${pkgdir}/usr/lib/systemd/system/snapper-snapshots.path"
   install -Dm644 timeshift-snapshots.path "${pkgdir}/usr/lib/systemd/system/timeshift-snapshots.path"
-  
+
   # Install documentation
   install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
   install -Dm644 CHANGELOG.md "${pkgdir}/usr/share/doc/${pkgname}/CHANGELOG.md"
